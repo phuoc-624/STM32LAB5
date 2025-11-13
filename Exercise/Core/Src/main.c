@@ -122,9 +122,9 @@ int main(void)
 		  buffer_flag = 0;
 	  }
     /* USER CODE END WHILE */
-
-    /* USER CODE BEGIN 3 */
 	  uart_communiation_fsm();
+    /* USER CODE BEGIN 3 */
+
   }
   /* USER CODE END 3 */
 }
