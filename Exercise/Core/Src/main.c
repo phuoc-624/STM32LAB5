@@ -33,7 +33,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 # define MAX_BUFFER_SIZE 30
-
+# define TIMEOUT_DURATION 3000
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -61,9 +61,10 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t pData[] = "Hello\r\n";
+uint8_t pData[] = "Hello\r";
 uint32_t testInt = 456;
 
+char response[100];
 uint8_t temp = 0;
 uint8_t buffer[MAX_BUFFER_SIZE];
 uint8_t index_buffer = 0;
@@ -73,12 +74,19 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 	if(huart->Instance == USART2)
 	{
 		HAL_UART_Transmit(&huart2, &temp, 1, 50);
-		//buffer[index_buffer++] = temp;
-		//if(index_buffer == 30) index_buffer = 0;
-		//buffer_flag = 1;
+
+		buffer[index_buffer++] = temp;
+		if(index_buffer == 30) index_buffer = 0;
+		if (temp == '\r')
+		{
+			buffer_flag = 1;
+			//HAL_UART_Transmit(&huart2, pData, sizeof(pData), 1000);
+		}
 		HAL_UART_Receive_IT(&huart2, &temp, 1);
 	}
 }
+void command_parser_fsm();
+void uart_communiation_fsm();
 /* USER CODE END 0 */
 
 /**
@@ -115,29 +123,36 @@ int main(void)
   //HAL_ADC_GetValue(&hadc);
   //char* str = itoa(HAL_ADC_GetValue(&hadc));
   /* USER CODE END 2 */
+  HAL_ADC_Start(&hadc1);
+
+  //HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_UART_Receive_IT(&huart2, &temp, 1);
-  //char str[16];
-  //uint32_t ADC_value = 0;
+  uint8_t str[16];
+  uint32_t ADC_value = 0;
+  ADC_value = HAL_ADC_GetValue(&hadc1);
   while (1)
   {
+
 	  //HAL_UART_Transmit(&huart2, pData, sizeof(pData), 1000);
 	  //HAL_Delay(2000);
 	  //sprintf("%d", testInt);
 	  //char* str = itoa(testInt);
 	  //HAL_UART_Transmit(&huart2, str, sizeof(str), 1000);
-	  //HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port , LED_YELLOW_Pin);
-	  //ADC_value = HAL_ADC_GetValue(&hadc1);
-	  //HAL_UART_Transmit(&huart2, (void *)str, sprintf(str, "%d\n", ADC_value), 1000);
-	  HAL_Delay(500);
-	  /*
+	  HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port , LED_YELLOW_Pin);
+
+	  //sprintf(str, "%lu\n", ADC_value);
+
+
 	  if(buffer_flag == 1)
 	  {
 		  command_parser_fsm();
 		  buffer_flag = 0;
-	  }*/
+		  //HAL_UART_Transmit(&huart2, (void *)str, sprintf(str, "!ADC=%d#\r", ADC_value), 1000);
+	  }
+	  HAL_Delay(500);
     /* USER CODE END WHILE */
 	  //uart_communiation_fsm();
     /* USER CODE BEGIN 3 */
@@ -292,6 +307,25 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+void command_parser_fsm()
+{
+	char *command = buffer;
+	if (strcmp(command, "!RST#") == 0)
+	{
+		uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
+		HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "!ADC=%d#\r", ADC_value), 1000);
+		// bắt đầu thời gian đợi !OK#
+	}
+	else if (strcmp(command, "OK#") == 0)
+	{
+
+	}
+}
+void uart_communiation_fsm()
+{
+	uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
+	HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "!ADC=%d#\r", ADC_value), 1000);
+}
 /* USER CODE END 4 */
 
 /**
