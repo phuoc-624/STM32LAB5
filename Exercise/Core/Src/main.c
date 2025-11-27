@@ -140,8 +140,7 @@ int main(void)
   while (1)
   {
 
-	  //HAL_UART_Transmit(&huart2, pData, sizeof(pData), 1000);
-	  //HAL_Delay(2000);
+	  // dung ngat timer
 	  //sprintf("%d", testInt);
 	  //char* str = itoa(testInt);
 	  //HAL_UART_Transmit(&huart2, str, sizeof(str), 1000);
