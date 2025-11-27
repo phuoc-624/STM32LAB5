@@ -56,6 +56,12 @@ void setTimer5(int duration)
 	timer5_flag = 0;
 }
 
+void resetTimer2()
+{
+	timer2_counter = 0;
+	timer2_flag = 0;
+}
+
 void timerRun()
 {
 	if(timer1_counter > 0)

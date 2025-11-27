@@ -22,7 +22,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "fsm_automatic.h"
+#include "software_timer.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -33,7 +33,7 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 # define MAX_BUFFER_SIZE 30
-# define TIMEOUT_DURATION 3000
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,15 +64,13 @@ static void MX_TIM2_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-uint8_t pData[] = "Hello\r";
-uint32_t testInt = 456;
-
 char response[100];
 uint8_t temp = 0;
 uint8_t buffer[MAX_BUFFER_SIZE];
 uint8_t index_buffer = 0;
 uint8_t buffer_flag = 0;
-uint8_t confir_flag = 0;
+uint32_t ADC_value = 0;
+
 void command_parser_fsm();
 void uart_communiation_fsm();
 void resetBuffer();
@@ -84,11 +82,10 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
 		if (temp == '!') resetBuffer();
 		buffer[index_buffer++] = temp;
 		buffer[index_buffer] = '\0';
-		if(index_buffer == 30) index_buffer = 0;
+		if(index_buffer == MAX_BUFFER_SIZE) index_buffer = 0;
 		if (buffer[0] == '!' && temp == '#')
 		{
 			buffer_flag = 1;
-			//HAL_UART_Transmit(&huart2, pData, sizeof(pData), 1000);
 		}
 		HAL_UART_Receive_IT(&huart2, &temp, 1);
 	}
@@ -129,37 +126,25 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
   HAL_TIM_Base_Start_IT(&htim2);
-  //HAL_ADC_GetValue(&hadc);
-  //char* str = itoa(HAL_ADC_GetValue(&hadc));
   /* USER CODE END 2 */
-
+  HAL_ADC_Start(&hadc1);
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   HAL_UART_Receive_IT(&huart2, &temp, 1);
-  uint8_t str[16];
-  uint32_t ADC_value = 0;
-  ADC_value = HAL_ADC_GetValue(&hadc1);
+  setTimer1(500);
   while (1)
   {
-
-	  // dung ngat timer
-	  //sprintf("%d", testInt);
-	  //char* str = itoa(testInt);
-	  //HAL_UART_Transmit(&huart2, str, sizeof(str), 1000);
-	  HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port , LED_YELLOW_Pin);
-
-	  //sprintf(str, "%lu\n", ADC_value);
-	  //ADC_value = HAL_ADC_GetValue(&hadc1);
-	  //HAL_UART_Transmit(&huart2, (void *)str, sprintf(str, "!ADC=%d#\r", ADC_value), 1000);
-
+	  if (timer1_flag == 1)
+	  {
+		  HAL_GPIO_TogglePin(LED_YELLOW_GPIO_Port , LED_YELLOW_Pin);
+		  setTimer1(500);
+	  }
 	  if(buffer_flag == 1)
 	  {
 		  command_parser_fsm();
 		  buffer_flag = 0;
-		  //ADC_value = HAL_ADC_GetValue(&hadc1);
-		  //HAL_UART_Transmit(&huart2, (void *)str, sprintf(str, "!ADC=%d#\r", ADC_value), 1000);
 	  }
-	  HAL_Delay(500);
+	  uart_communiation_fsm();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -358,6 +343,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
+{
+	timerRun();
+}
 void resetBuffer()
 {
 	memset(buffer, 0, index_buffer);
@@ -368,29 +357,23 @@ void command_parser_fsm()
 	char *command = (char*)buffer;
 	if (strcmp(command, "!RST#") == 0)
 	{
-		//uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
-		//HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "!ADC=%d#\r", ADC_value), 1000);
-		confir_flag = 1;
-		// Set flag để gửi tin hiệu
-		// bắt đầu th�?i gian đợi !OK#
+		ADC_value = HAL_ADC_GetValue(&hadc1);
+		HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "\r!ADC=%d#", ADC_value), 1000);
+		setTimer2(3000);
 	}
-	else if (strcmp(command, "!OK#") == 0) confir_flag = 0;
+	else if (strcmp(command, "!OK#") == 0) resetTimer2();
 }
 void uart_communiation_fsm()
 {
-	// if (flag == 1) gửi tín hiệu theo chu kì 3s
-	if (confir_flag == 1)
+	if (timer2_flag == 1)
 	{
-		uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
-		HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "!ADC=%d#\r", ADC_value), 1000);
-		HAL_Delay(3000);
+		//uint32_t ADC_value = HAL_ADC_GetValue(&hadc1);
+		HAL_UART_Transmit(&huart2, (void *)response, sprintf(response, "\r!ADC=%d#", ADC_value), 1000);
+		setTimer2(3000);
 	}
 }
 
-void HAL_TIM_PeriodElapsedCalllback(TIM_HandleTypeDef *htim)
-{
-	timerRun();
-}
+
 
 /* USER CODE END 4 */
 
